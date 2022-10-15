@@ -41,7 +41,7 @@ msgid "You Tube API Key:"
 msgstr ""
 
 msgctxt "#30003"
-msgid "Scan for new content every:"
+msgid "Refresh from YouTube using the following frequencies."
 msgstr ""
 
 msgctxt "#30004"
@@ -105,7 +105,7 @@ msgid "would you like to use the same API key you have set on YouTube addon?"
 msgstr ""
 
 msgctxt "#30019"
-msgid "You'll need to aquire YouTube API key for this addon to work. for instructions see: \nhttps://yt.spectralwolf.eu/"
+msgid "You'll need to aquire YouTube API key for this addon to work. for instructions see: \nhttp://valkyr.xyz/ytapi"
 msgstr ""
 
 msgctxt "#30020"
@@ -141,7 +141,7 @@ msgid "Update finished."
 msgstr ""
 
 msgctxt "#30028"
-msgid "Add Channel"
+msgid "Channel"
 msgstr ""
 
 msgctxt "#30029"
@@ -190,7 +190,7 @@ msgid "Delete"
 msgstr ""
 
 msgctxt "#30040"
-msgid "as TV-Show"
+msgid "as Series"
 msgstr ""
 
 msgctxt "#30041"
@@ -235,4 +235,16 @@ msgstr ""
 
 msgctxt "#30051"
 msgid "Playlist "
+msgstr ""
+
+msgctxt "#30052"
+msgid "Add "
+msgstr ""
+
+msgctxt "#30053"
+msgid "as Movies"
+msgstr ""
+
+msgctxt "#30054"
+msgid "Movies"
 msgstr ""

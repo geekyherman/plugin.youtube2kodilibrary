@@ -9,6 +9,8 @@ from resources.lib.menu import __folders,__search
 
 PDIALOG = xbmcgui.DialogProgress()
 def __add_music(channel_id):
+    if 'music_videos' not in CONFIG:
+        CONFIG['music_videos'] = {}
     data = {}
     channel_url = "https://www.googleapis.com/youtube/v3/channels?part=brandingSettings,contentDetails,contentOwnerDetails,id,localizations,snippet,statistics,status,topicDetails&id="+channel_id+"&key="+addon.getSetting('API_key')
     reply = c_download(channel_url)
@@ -33,7 +35,7 @@ def __add_music(channel_id):
 #        data['fanart'] = reply['items'][0]['brandingSettings']['image']['bannerImageUrl']
     data['banner'] = data['thumb']
     data['fanart'] = data['thumb']
-    uploads = reply['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+    pl_ids = reply['items'][0]['contentDetails']['relatedPlaylists']['pl_ids']
     xbmcvfs.mkdirs(MUSIC_VIDEOS+'\\'+data['channel_id'])
     if channel_id not in CONFIG['music_videos']:
         CONFIG['music_videos'][channel_id] = {}
@@ -43,9 +45,9 @@ def __add_music(channel_id):
     CONFIG['music_videos'][channel_id]['branding']['fanart'] = data['fanart']
     CONFIG['music_videos'][channel_id]['branding']['banner'] = data['banner']
     CONFIG['music_videos'][channel_id]['branding']['description'] = data['plot']
-    CONFIG['music_videos'][channel_id]['playlist_id'] = uploads
+    CONFIG['music_videos'][channel_id]['playlist_id'] = pl_ids
     __save()
-    __parse_music(True,uploads,None)
+    __parse_music(True,pl_ids,None)
 
 #https://youtu.be/MC7ojZKf2Io
 PARSER = {'items' : 0,'total' : 0,'total_steps':0,'steps':0,'scan_year' : 0}
@@ -134,7 +136,6 @@ def __render(type,render_style='Full'):
             PDIALOG.create(AddonString(30024), AddonString(30025))
         year = 0
         episode = 0
-        l_count=0
         channelId=VIDEOS[0]['snippet']['channelId']
         VIDEOS.reverse()
         if 'last_video' in CONFIG['music_videos'][VIDEOS[0]['snippet']['channelId']]:
@@ -157,10 +158,6 @@ def __render(type,render_style='Full'):
 
             #Determine ARTIST - TITLE pattern:
 
-            
-
-
-
             #FAILSAFE
             data[u'title'] = item['snippet'][u'title']
             data[u'artist'] = item['snippet']['channelTitle']
@@ -181,10 +178,6 @@ def __render(type,render_style='Full'):
                 data[u'title'] = item['snippet'][u'title'].split('|')[1]
                 data[u'artist'] = item['snippet'][u'title'].split('|')[0]
 
-
-
-
-
             data['channelId'] = item['snippet']['channelId']
             data['plot'] = item['snippet']['description']
             season = int(aired.split('-')[0])
@@ -197,11 +190,6 @@ def __render(type,render_style='Full'):
                 data['thumb'] = item['snippet']['thumbnails']['standard']['url']
             else:
                 data['thumb'] = item['snippet']['thumbnails']['default']['url']
-            l_count += 1
-
-
-
-
 
             if LOCAL_CONF['update'] == False:
                 PDIALOG.update(int(100 * PARSER['steps'] / PARSER['total_steps']), data['title'] )

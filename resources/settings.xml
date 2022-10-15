@@ -1,14 +1,25 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
-    <category label="30008">
+    <category label="YouTube">
         <setting label="30002" type="text"   id="API_key" default=""/>
-        <setting label="YouTube Client" type="enum" id="YT_client" lvalues="30047|30048"/>        
-        <setting label="30003" type="bool"   id="auto_refresh" default="true"/>
-        <setting subsetting="true" label="30004" type="slider" id="update_interval" default="12" range="2,2,168" option="int" />
-        <setting label="30005" type="bool"   id="refresh_after_add" default="true"/>
-        <setting type="sep"/>
+        <setting label="YouTube Client" type="enum" id="YT_client" lvalues="30047|30048"/>
         <setting label="30006" type="bool"   id="toggle_import_limit" default="false"/>
-        <setting subsetting="true" label="30007" type="slider" id="import_limit" default="1000" range="500,500,10000" option="int" />
+        <setting subsetting="true" label="30007" type="slider" id="import_limit" default="1000" range="500,500,10000" option="int"/>
+        <setting label="30003" type="bool"   id="auto_refresh" default="true"/>
+        <setting subsetting="true" label="Series" type="slider" id="series_update_interval" default="12" range="2,2,168" option="int"/>
+        <setting subsetting="true" label="Movies" type="slider" id="movies_update_interval" default="12" range="2,2,168" option="int"/>
+        <setting subsetting="true" label="Music" type="slider" id="music_update_interval" default="12" range="2,2,168" option="int"/>
+    </category>
+    <category label="Movies">
+        <setting subsetting="true" label="Minimum video length to be a movie" type="slider" id="minimum_minutes" default="60" range="30,2,90" option="int"/>
+        <setting label="Ignore restricted videos" type="bool"   id="toggle_ignore_restricted" default="false"/>
+        <setting subsetting="true" label="Only shows videos available in:" type="text"   id="YT_country" default="GB"/>
+        <setting label="RegEx used to clean video titles" type="text" id="movie_re" default="(Full|Free).*(Film|Movie)s?"/>
+        <setting label="Frequency of unavailable movie removal" type="slider" id="movies_delete_interval" default="24" range="2,2,168" option="int"/>
+    </category>
+    <category label="System">
+        <setting label="30005" type="bool"   id="refresh_after_add" default="true"/>
+        <setting label="Display notifications" type="bool"   id="display_notifications" default="true"/>
     </category>
     <category label="30009">
         <setting label="30010" type="bool" id="use_cache" default="false"/>        

@@ -141,7 +141,7 @@ msgid "Päivitys valmis."
 msgstr ""
 
 msgctxt "#30028"
-msgid "Lisää kanava"
+msgid "kanava"
 msgstr ""
 
 msgctxt "#30029"
@@ -210,25 +210,33 @@ msgid "Päivitä"
 msgstr ""
 
 msgctxt "#30045"
-msgid "Tuntia"
+msgid "Soittolistat"
 msgstr ""
 
 msgctxt "#30046"
-msgid "Tunti"
+msgid "Ladataan soittolistoja..."
 msgstr ""
 
 msgctxt "#30047"
-msgid "Minuuttia"
+msgid "YouTube"
 msgstr ""
 
 msgctxt "#30048"
-msgid "Minuutti"
+msgid "Tubed"
 msgstr ""
 
 msgctxt "#30049"
-msgid "Sekuntia"
+msgid "Valitse soittolistat"
 msgstr ""
 
 msgctxt "#30050"
-msgid "Sekunti"
+msgid "Soittolistan nimi"
+msgstr ""
+
+msgctxt "#30051"
+msgid "Soittolistan "
+msgstr ""
+
+msgctxt "#30052"
+msgid "Lisää "
 msgstr ""
