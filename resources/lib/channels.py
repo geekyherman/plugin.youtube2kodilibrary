@@ -117,6 +117,7 @@ def __create_channel(channel_id, media_type):
 
 
 def __parse_videos(pl_ids, channel_id, media_type):
+    import web_pdb; web_pdb.set_trace()
     if isinstance(pl_ids, str):
         pl_ids = [pl_ids]
     VIDEOS.clear()

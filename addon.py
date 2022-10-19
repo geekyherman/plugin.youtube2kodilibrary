@@ -96,7 +96,7 @@ def __CHANNELS(c_id, media_type):
         ret = xbmcgui.Dialog().select('Manage: ' + cname, menuItems)
         if ret == 0:
             PARSER['refresh_type'] = 'single'
-            pl_id = [CONFIG[media_type][c_id]['playlist_id']]
+            pl_id = CONFIG[media_type][c_id]['playlist_id']
             __parse_videos(pl_id, c_id, media_type)
             xbmc.executebuiltin("UpdateLibrary(video," + path + ")")
         elif ret == 1:
@@ -135,7 +135,7 @@ def __PLAYLISTS(c_id, media_type):
         ret = xbmcgui.Dialog().select('Manage: ' + cname, menuItems)
         if ret == 0:
             PARSER['refresh_type'] = 'single'
-            pl_id = [CONFIG[media_type][c_id]['playlist_id']]
+            pl_id = CONFIG[media_type][c_id]['playlist_id']
             __parse_videos(pl_id, c_id, media_type)
             xbmc.executebuiltin("UpdateLibrary(video," + path + ")")
         elif ret == 1:

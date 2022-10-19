@@ -120,11 +120,11 @@ def __scan_files_for_deletion(fullpath):
         pass
     if (last_scan + int(xbmcaddon.Addon().getSetting('movies_delete_interval')) * 3600) \
             <= int(time.time()) and xbmcaddon.Addon().getSetting('API_key'):
-        try:
-            PDIALOG.update(PARSER['percent'], 'Removing unavailable movies.')
-        except:
-            PDIALOG.create(AddonString(30016), 'Removing unavailable movies.')
-
+        if HIDE['progress'] is False:
+            try:
+                PDIALOG.update(PARSER['percent'], 'Removing unavailable movies.')
+            except:
+                PDIALOG.create(AddonString(30016), 'Removing unavailable movies.')
         dirs = xbmcvfs.listdir(fullpath)
         vid = []
         for directory in dirs[0]:
