@@ -84,22 +84,22 @@ def __Remove_from_index(a):
 
 
 def __CHANNELS(c_id, media_type):
-    #0: Refresh
-    #1: Delete
+    #0: Delete
+    #1: Disable/Enable Update
+    #2: Refresh
     if media_type == 'movies':
         path = MOVIES
     else:
         path = CHANNELS
     cname = CONFIG[media_type][c_id]['channel_name']
-    menuItems = [AddonString(30031), AddonString(30039)]
+    if 'disable_update' in CONFIG[media_type][c_id]:
+        menuItems = [AddonString(30039), 'Enable Updates']
+    else:
+        menuItems = [AddonString(30039), 'Disable Updates', AddonString(30031)]
+
     try:
         ret = xbmcgui.Dialog().select('Manage: ' + cname, menuItems)
         if ret == 0:
-            PARSER['refresh_type'] = 'single'
-            pl_id = CONFIG[media_type][c_id]['playlist_id']
-            __parse_videos(pl_id, c_id, media_type)
-            xbmc.executebuiltin("UpdateLibrary(video," + path + ")")
-        elif ret == 1:
             cdir = path + '\\' + c_id
             # Are you sure to remove X...
             ret = xbmcgui.Dialog().yesno(AddonString(30035).format(cname), AddonString(30036).format(cname))
@@ -115,6 +115,17 @@ def __CHANNELS(c_id, media_type):
                     success = recursive_delete_dir(cdir)
                     if success:
                         xbmc.executebuiltin("CleanLibrary(video)")
+        elif ret == 1:
+            if 'disable_update' in CONFIG[media_type][c_id]:
+                CONFIG[media_type][c_id].pop('disable_update')
+            else:
+                CONFIG[media_type][c_id]['disable_update'] = True
+            __save()
+        elif ret == 2:
+            PARSER['refresh_type'] = 'single'
+            pl_id = CONFIG[media_type][c_id]['playlist_id']
+            __parse_videos(pl_id, c_id, media_type)
+            xbmc.executebuiltin("UpdateLibrary(video," + path + ")")
         else:
             pass
     except KeyError:
@@ -122,30 +133,23 @@ def __CHANNELS(c_id, media_type):
 
 
 def __PLAYLISTS(c_id, media_type):
-    #0: Refresh
-    #1: Add/Remove
-    #2: Delete
+    #0: Delete
+    #1: Disable/Enable Update
+    #2: Add/Remove
+    #3: Refresh
     if media_type == 'movies_playlists':
         path = MOVIES
     else:
         path = CHANNELS
     cname = CONFIG[media_type][c_id]['channel_name']
-    menuItems = [AddonString(30031), 'Add/Remove a playlist', AddonString(30039)]
+    if 'disable_update' in CONFIG[media_type][c_id]:
+        menuItems = [AddonString(30039), 'Enable Updates', 'Add/Remove a playlist']
+    else:
+        menuItems = [AddonString(30039), 'Disable Updates', 'Add/Remove a playlist', AddonString(30031)]
+
     try:
         ret = xbmcgui.Dialog().select('Manage: ' + cname, menuItems)
         if ret == 0:
-            PARSER['refresh_type'] = 'single'
-            pl_id = CONFIG[media_type][c_id]['playlist_id']
-            __parse_videos(pl_id, c_id, media_type)
-            xbmc.executebuiltin("UpdateLibrary(video," + path + ")")
-        elif ret == 1:
-            playlists = __get_playlists(CONFIG[media_type][c_id]['original_channel_id'])
-            data_set = __select_playlists(playlists, c_id)
-            if data_set:
-                CONFIG[media_type][c_id].pop('playlist_id')
-                CONFIG[media_type][c_id]['playlist_id'] = data_set
-                __save()
-        elif ret == 2:
             cdir = path + '\\' + c_id
             __logger(cdir)
             # Are you sure to remove X...
@@ -162,6 +166,24 @@ def __PLAYLISTS(c_id, media_type):
                     success = recursive_delete_dir(cdir)
                     if success:
                         xbmc.executebuiltin("CleanLibrary(video)")
+        elif ret == 1:
+            if 'disable_update' in CONFIG[media_type][c_id]:
+                CONFIG[media_type][c_id].pop('disable_update')
+            else:
+                CONFIG[media_type][c_id]['disable_update'] = True
+            __save()
+        elif ret == 2:
+            playlists = __get_playlists(CONFIG[media_type][c_id]['original_channel_id'])
+            data_set = __select_playlists(playlists, c_id)
+            if data_set:
+                CONFIG[media_type][c_id].pop('playlist_id')
+                CONFIG[media_type][c_id]['playlist_id'] = data_set
+                __save()
+        elif ret == 3:
+            PARSER['refresh_type'] = 'single'
+            pl_id = CONFIG[media_type][c_id]['playlist_id']
+            __parse_videos(pl_id, c_id, media_type)
+            xbmc.executebuiltin("UpdateLibrary(video," + path + ")")
         else:
             pass
     except KeyError:

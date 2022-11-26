@@ -117,15 +117,17 @@ def __create_channel(channel_id, media_type):
 
 
 def __parse_videos(pl_ids, channel_id, media_type):
-    import web_pdb; web_pdb.set_trace()
     if isinstance(pl_ids, str):
         pl_ids = [pl_ids]
+    channel_name = CONFIG[media_type][channel_id]['channel_name']
+    if 'disable_update' in CONFIG[media_type][channel_id]:
+        __logger(channel_name + ": Updates not enabled")
+        return
     VIDEOS.clear()
     VIDEO_DURATION.clear()
     result = __populate_local_index(media_type, channel_id)
     local_index = result[0]
     local_index_file = result[1]
-    channel_name = CONFIG[media_type][channel_id]['channel_name']
     message = channel_name
     if PARSER['refresh_type'] == 'single':
         if media_type == 'channels' or media_type == 'playlists':
