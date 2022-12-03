@@ -26,16 +26,17 @@ def __create_channel(channel_id, media_type):
         return "no such channel"
 
     playlist_type = 'normal'
-    if 'playlist' in media_type:
+    if 'playlists' in media_type:
         custom_uuid = 'PL_' + uuid.uuid4().hex
         playlists = __get_playlists(channel_id)
         data_set = __select_playlists(playlists)
-        dialog = xbmcgui.Dialog()
-        ret = dialog.yesno('Specify playlist type',
-                           'Do you want to import chronologically (Normal) or using the playlist order? (Absolute)',
-                           'Normal', 'Absolute')
-        if ret:
-            playlist_type = 'abs'
+        if media_type == 'playlists':
+            dialog = xbmcgui.Dialog()
+            ret = dialog.yesno('Specify playlist type',
+                               'Do you want to import chronologically (Normal) or using the playlist order? (Absolute)',
+                               'Normal', 'Absolute')
+            if ret:
+                playlist_type = 'abs'
         data['channel_id'] = custom_uuid
         data['title'] = __scrub_text(data_set['title'])
         pl_ids = data_set['items']
