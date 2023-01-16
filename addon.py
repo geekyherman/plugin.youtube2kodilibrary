@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
-""" 
+"""
 YOUTUBE CHANNELS TO KODI
 """
+import sqlite3
 import os
 import sys
 import math
 import requests
 import xbmcgui
 import re
-
-
+import xbmcvfs
+import time
+import stat
+from resources.lib.create_db import *
 from resources.lib.variables import *
-from resources.lib.helper_functions import __logger,__ask,__save,__print, c_download,convert,__get_token_reset, recursive_delete_dir
-from resources.lib.music_videos import __add_music, __parse_music
-from resources.lib.channels import __add_channel, __parse_uploads,__add_channel_playlist,__parse_playlists,__get_playlists,__select_playlists
-from resources.lib.menu import __folders,__search
+from resources.lib.helper_functions import __logger, __ask, c_download, convert, __get_token_reset, \
+    recursive_delete_dir, table_select, sqlite_get_csv_list
+from resources.lib.channels import create_channel, ChannelProcessor
+from resources.lib.menu import __folders, __search
 from resources.lib.refresh import __refresh
 
 
@@ -24,171 +27,110 @@ def __check_key_validity(key):
         return 'valid'
     return 'invalid'
 
+
+def file_age_in_seconds(pathname):
+    return time.time() - os.stat(pathname)[stat.ST_MTIME]
+
+
 def __start_up():
+    if xbmcvfs.exists(LOCK_FILE):
+        if file_age_in_seconds(LOCK_FILE) > 600:
+            xbmcvfs.delete(LOCK_FILE)
     API_KEY = addon.getSetting('API_key')
     if API_KEY == "":
-        ciyapi=xbmcaddon.Addon('plugin.video.youtube').getSetting('youtube.api.key')
+        ciyapi = xbmcaddon.Addon('plugin.video.youtube').getSetting('youtube.api.key')
         if ciyapi:
-            API_KEY=ciyapi
+            API_KEY = ciyapi
             if __check_key_validity(API_KEY) == 'valid':
-                addon.setSetting('API_key',API_KEY)
+                addon.setSetting('API_key', API_KEY)
                 return 1
 
-        #whine about the missing API key...
+        # whine about the missing API key...
         __print(AddonString(30019))
         wrongkey=""
         while True:
-            API_KEY=__ask(wrongkey,AddonString(30020))
+            API_KEY = __ask(wrongkey, AddonString(30020))
             if API_KEY != "":
-                    if __check_key_validity(API_KEY) == 'valid':
-                        addon.setSetting('API_key',API_KEY)
-                        #Key is valid, ty....
-                        __print(30021)
-                        break
-                    #key is validn't    
-                    __print(30022)
-                    wrongkey = API_KEY
+                if __check_key_validity(API_KEY) == 'valid':
+                    addon.setSetting('API_key', API_KEY)
+                    #Key is valid, ty....
+                    __print(30021)
+                    break
+                # key isn't valid
+                __print(30022)
+                wrongkey = API_KEY
             else:
-                #empty
+                # empty
                 __print(30023)
                 raise SystemExit
     newlimit = int(math.ceil(int(addon.getSetting('import_limit')) / 100.0)) * 100
-    addon.setSetting('import_limit',str(newlimit))
+    addon.setSetting('import_limit', str(newlimit))
 
 
+def __CHANNELS(c_id, media_type, channel_type):
+    #1: List files
+    #2: Delete
+    #3: Disable/Enable Update
+    #4: Refresh
+    #5: Rebuild (Remove and Re-add)
 
+    cp = ChannelProcessor(media_type, c_id, channel_type)
 
+    # Connect to the database
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    sql = f"select title, disable_update from {channel_type} where id = '{c_id}'"
+    cursor.execute(sql)
+    result = cursor.fetchone()
 
+    sql = f"select title from videos where channel_id = '{c_id}'"
+    file_list = sqlite_get_csv_list(sql)
+    __logger(file_list)
 
-
-def __Remove_from_index(a):
-    index_file=addon_path+'\\index.json'
-    if xbmcvfs.exists(index_file):
-        if PY_V >= 3:
-            with xbmcvfs.File(index_file) as f:     # PYTHON 3 v19+
-                INDEX = json.load(f)                #
-        else:
-            f = xbmcvfs.File(index_file)            # PYTHON 2 v18+
-            INDEX = json.loads(f.read())
-            f.close()
-
-    local_index_file=a
-    if PY_V >= 3:
-        with xbmcvfs.File(local_index_file) as f:     # PYTHON 3 v19+
-            LOCAL_INDEX = json.load(f)                #
+    if media_type == 'movies':
+        path = MOVIES
     else:
-        f = xbmcvfs.File(local_index_file)            # PYTHON 2 v18+
-        LOCAL_INDEX = f.read()
-        f.close()
-    res = list(filter(lambda i: i not in LOCAL_INDEX, INDEX))
-    INDEX = res
-    __logger(INDEX)
-    __save(data=INDEX,file=index_file)
+        path = SERIES
 
+    cname = result[0]
+    disabled = result[1]
+    if disabled:
+        menuItems = ['List files', AddonString(30039), 'Enable Updates', 'Rebuild (Remove and Re-add)']
+    else:
+        menuItems = ['List files', AddonString(30039), 'Disable Updates', 'Refresh', 'Rebuild (Remove and Re-add)']
 
-def __C_MENU(C_ID):
-    #0: Refresh
-    #1: Delete
-    menuItems=[AddonString(30031),AddonString(30039)]
     try:
-        ret = xbmcgui.Dialog().select('Manage: '+CONFIG['channels'][C_ID]['channel_name'], menuItems)
+        ret = xbmcgui.Dialog().select('Manage: ' + cname, menuItems)
         if ret == 0:
-            __parse_uploads(False, CONFIG['channels'][C_ID]['playlist_id'])
-        elif ret == 1:
-            cname=CONFIG['channels'][C_ID]['channel_name']
-            cdir = CHANNELS+'\\'+C_ID
-            __logger(cdir)
-            #Are you sure to remove X...
-            ret = xbmcgui.Dialog().yesno(AddonString(30035).format(cname), AddonString(30036).format(cname))
-            if ret == True:
-                local_index_file = CHANNELS+'\\'+ C_ID + '\\index.json'
-                __Remove_from_index(local_index_file)
-                CONFIG['channels'].pop(C_ID)
-                __save()
-                #Remove from library?
-                ret = xbmcgui.Dialog().yesno(AddonString(30035).format(cname), AddonString(30037).format(cname))
-                if ret:
-                    success = recursive_delete_dir(cdir)
-                    if success:
-                        xbmc.executebuiltin("CleanLibrary(video)")
+            xbmcgui.Dialog().select('Select a name', file_list, autoclose=0)
+        if ret == 1:
+            cp.delete()
+        elif disabled and ret == 2:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            sql = f"update {channel_type} set disable_update = NULL where id = '{c_id}'"
+            cursor.execute(sql)
+            conn.commit()
+        elif not disabled and ret == 2:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            sql = f"update {channel_type} set disable_update = 'USER' where id = '{c_id}'"
+            cursor.execute(sql)
+            conn.commit()
+        elif (disabled and ret == 3) or (not disabled and ret == 4):
+            cp.rebuild()
+        elif not disabled and ret == 3:
+            if HIDE['progress'] is False:
+                PARSER['refresh_type'] = 'single'
+                DP.create('Refreshing channel....')
+            cp.refresh()
+            if len(VIDEOS) > 0:
+                xbmc.executebuiltin("UpdateLibrary(video," + path + ")")
         else:
             pass
     except KeyError:
         pass
-    #__folders('Manage')
-
-
-
-def __PLAYLIST_MENU(C_ID):
-    #0: Refresh
-    #1: Delete
-    menuItems=[AddonString(30031),'add/remove playlist items',AddonString(30039)]
-    try:
-        ret = xbmcgui.Dialog().select('Manage: '+CONFIG['playlists'][C_ID]['channel_name'], menuItems)
-        if ret == 0:
-             __parse_playlists(False, CONFIG['playlists'][C_ID]['playlist_id'], C_ID)
-        elif ret == 1:
-            playlists = __get_playlists(CONFIG['playlists'][C_ID]['original_channel_id'])
-            data_set = __select_playlists(playlists,C_ID)
-            if data_set:
-                __logger(data_set)
-                __logger('playlists follows:')
-                CONFIG['playlists'][C_ID].pop('playlist_id')
-                CONFIG['playlists'][C_ID]['playlist_id'] = data_set
-                __save()
-
-        elif ret == 2:
-            cname=CONFIG['playlists'][C_ID]['channel_name']
-            cdir = CHANNELS+'\\'+C_ID
-            __logger(cdir)
-            #Are you sure to remove X...
-            ret = xbmcgui.Dialog().yesno(AddonString(30035).format(cname), AddonString(30036).format(cname))
-            if ret == True:
-                local_index_file = CHANNELS+'\\'+ C_ID + '\\index.json'
-                __Remove_from_index(local_index_file)
-                CONFIG['playlists'].pop(C_ID)
-                __save()
-                #Remove from library?
-                ret = xbmcgui.Dialog().yesno(AddonString(30035).format(cname), AddonString(30037).format(cname))
-                if ret:
-                    success = recursive_delete_dir(cdir)
-                    if success:
-                        xbmc.executebuiltin("CleanLibrary(video)")
-        else:
-            pass
-    except KeyError:
-        pass
-    #__folders('Manage')
-
-
-
-
-def __MUSIC_MENU(C_ID):
-    #0: Refresh
-    #1: Delete
-    menuItems=[AddonString(30031),AddonString(30039)]
-    try:
-        ret = xbmcgui.Dialog().select('Manage: '+CONFIG['music_videos'][C_ID]['channel_name'], menuItems)
-        if ret == 0:
-            __parse_music(False, CONFIG['music_videos'][C_ID]['playlist_id'])
-        elif ret == 1:
-            cname=CONFIG['music_videos'][C_ID]['channel_name']
-            cdir = MUSIC_VIDEOS+'\\'+C_ID
-            __logger(cdir)
-            #Are you sure to remove X...
-            ret = xbmcgui.Dialog().yesno(AddonString(30035).format(cname), AddonString(30036).format(cname))
-            if ret == True:
-                CONFIG['music_videos'].pop(C_ID)
-                __save()
-                #Remove from library?
-                ret = xbmcgui.Dialog().yesno(AddonString(30035).format(cname), AddonString(30037).format(cname))
-                if ret:
-                    success = recursive_delete_dir(cdir)
-                    if success:
-                        xbmc.executebuiltin("CleanLibrary(video)")
-    except KeyError:
-        pass
-
+    conn.close()
 
 
 __start_up()
@@ -199,56 +141,80 @@ except IndexError:
 
 try:
     foldername = sys.argv[2][1:].split(u'mode')[0].split(u'=')[1][:-1]
+    __logger("foldername: " + foldername)
 except IndexError:
     foldername = None
+
+if not xbmcvfs.exists(DB_NAME):
+    create_all()
 
 if mode is None:
     __folders('menu')
 elif mode == 'AddItem_tv':
-    __add_channel(foldername)
+    create_channel(foldername, 'series', 'channel')
 elif mode == 'AddItem_tv_playlist':
-    __add_channel_playlist(foldername)
-elif mode == 'AddItem_music':
-    __add_music(foldername)    
+    create_channel(foldername, 'series', 'playlist')
+elif mode == 'AddItem_movies':
+    create_channel(foldername, 'movies', 'channel')
+elif mode == 'AddItem_movies_playlist':
+    create_channel(foldername, 'movies', 'playlist')
 elif mode == 'ManageItem':
     if foldername == 'Add_Channel_tv':
-        query=__ask('',AddonString(30038))
+        query = __ask('', AddonString(30038))
         if query:
-            LOCAL_CONF['update'] = False
-            __search(query,'tv')
+            HIDE['progress'] = False
+            __search(query, 'tv')
     elif foldername == 'Add_Channel_tv_playlist':
-        query=__ask('',AddonString(30038))
+        query = __ask('', AddonString(30038))
         if query:
-            LOCAL_CONF['update'] = False
-            __search(query,'tv_playlist')            
-    elif foldername == 'Add_Channel_music':
-        query=__ask('',AddonString(30038))
+            HIDE['progress'] = False
+            __search(query, 'tv_playlist')
+    elif foldername == 'Add_Channel_movies':
+        query = __ask('', AddonString(30038))
         if query:
-            LOCAL_CONF['update'] = False
-            __search(query,'music')            
+            HIDE['progress'] = False
+            __search(query, 'movies')
+    elif foldername == 'Add_Channel_movies_playlist':
+        query = __ask('', AddonString(30038))
+        if query:
+            HIDE['progress'] = False
+            __search(query, 'movies_playlist')
+    elif foldername == 'Discover':
+        channels = table_select("vwDiscoverMovies", "video_owner_channel_id, video_owner_channel_title",
+                                f"video_owner_channel_id <> 'UCuVPpxrm2VAgpH3Ktln4HXg' limit {DISCOVERY_MAX_CHANNELS}")
+        for channel in channels:
+            if HIDE['progress'] is False:
+                DP.create(f'Adding: {channel[1]}')
+            cp = ChannelProcessor('movies', channel[0], 'channel', True)
+            cp.insert()
     elif foldername == 'Manage':
         __folders('Manage')
-    elif foldername == 'Refresh_all':
-        LOCAL_CONF['update'] = False
-        __refresh()
+    elif foldername == 'Refresh':
+        HIDE['progress'] = False
+        __refresh(True)
 elif mode == 'C_MENU':
-    __C_MENU(foldername)
+    __CHANNELS(foldername, 'series', 'channel')
 elif mode == 'PLAYLIST_MENU':
-    __PLAYLIST_MENU(foldername)    
-elif mode == 'MUSIC_MENU':
-    __MUSIC_MENU(foldername)    
+    __CHANNELS(foldername, 'series', 'playlist')
+elif mode == 'M_MENU':
+    __CHANNELS(foldername, 'movies', 'channel')
+elif mode == 'M_PLAYLIST_MENU':
+    __CHANNELS(foldername, 'movies', 'playlist')
 elif mode == 'Refresh':
-    __refresh()
+    if not xbmcvfs.exists(LOCK_FILE):
+        for cat in ('series', 'movies'):
+            last_scan = 872835240
+            try:
+                last_scan = table_select('last_update', cat)[0][0]
+            except KeyError:
+                pass
+            if (last_scan + int(xbmcaddon.Addon().getSetting(cat + '_update_interval')) * 3600) \
+                    <= int(time.time()) and xbmcaddon.Addon().getSetting('API_key'):
+                CATEGORY.append(cat)
+        if len(CATEGORY) > 0:
+            HIDE['progress'] = True
+            __refresh(False)
 elif mode == 'OpenSettings':
     xbmcaddon.Addon(addonID).openSettings()
-elif 'SPLIT_EDITOR' in mode:
-    params = dict(parse.parse_qsl(parse.urlsplit(sys.argv[2]).query))
-    __logger('CUNT_SHIT '+json.dumps(params))
-    channel_id = params['playlist']
-    action = params['action']
-    __PLAYLIST_EDITOR(params)
 else:
     __folders('menu')
-
-__folders('menu')
-
